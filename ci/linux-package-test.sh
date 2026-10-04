@@ -93,5 +93,11 @@ sleep 15
 kill -0 "$mail"
 import -display :99 -window root "$shot"
 echo "screenshot: $shot"
+# A window that never drew leaves the screen one flat colour.
+if [ "$(identify -format %k "$shot")" -le 1 ]; then
+  cat "$log/mail.log"
+  echo "Katna Mail drew nothing" >&2
+  exit 1
+fi
 $katnactl status
 kill "$mail" 2> /dev/null || true
