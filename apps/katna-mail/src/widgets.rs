@@ -370,6 +370,15 @@ pub struct Fold {
 }
 
 impl Fold {
+    /// One that starts closed, at no height, so the first time it opens
+    /// glides from nothing (a box that appears rather than unfolds).
+    pub fn closed() -> Self {
+        let fold = Self::default();
+        fold.measured.set(true);
+        fold.was_open.set(Some(false));
+        fold
+    }
+
     /// Call when it opens or closes, so the next frames glide there.
     pub fn turn(&self) {
         self.turns.set(self.turns.get().wrapping_add(1));
@@ -383,7 +392,7 @@ impl Fold {
 
     /// Turns it when `open` changed since the last call, so an arrow
     /// turns however its state changed.
-    fn sync(&self, open: bool) {
+    pub fn sync(&self, open: bool) {
         if self
             .was_open
             .replace(Some(open))
@@ -394,11 +403,11 @@ impl Fold {
     }
 
     /// It turned a moment ago and is still gliding.
-    fn moving(&self) -> bool {
+    pub fn moving(&self) -> bool {
         self.at.get().is_some_and(|at| at.elapsed() < FOLD_GLIDE)
     }
 
-    fn id(&self, name: &str) -> SharedString {
+    pub fn id(&self, name: &str) -> SharedString {
         SharedString::from(format!("{name}-{}", self.turns.get()))
     }
 }
@@ -1370,6 +1379,63 @@ pub fn frosted_top<E: Styled + ParentElement>(panel: E, th: &Theme, fill: u32, r
         corners,
         blur,
     ))
+}
+
+/// A bar pinned over the top of something that scrolls under it (the
+/// list's bar, the open mail's subject, the chat's header): frosted when
+/// Blur is on and `frost` (Frosted headers), else `fill`, with a line under it when `under` (something
+/// is beneath). Its height goes into `height` each frame, for the space
+/// above what scrolls; a change draws the window again.
+pub fn pinned_head(
+    content: impl IntoElement,
+    fill: u32,
+    under: bool,
+    frost: bool,
+    height: Rc<Cell<f32>>,
+    th: &Theme,
+) -> AnyElement {
+    let bar = div()
+        .absolute()
+        .top_0()
+        .left_0()
+        .right_0()
+        .flex()
+        .flex_col();
+    let bar = if frost {
+        frosted_top(bar, th, fill, 0.0)
+    } else {
+        bar.bg(rgba(fill))
+    };
+    bar.child(content)
+        .when(under, |d| {
+            d.child(
+                div()
+                    .absolute()
+                    .left_0()
+                    .right_0()
+                    .bottom_0()
+                    .h(px(1.0))
+                    .bg(rgba(th.divider)),
+            )
+        })
+        .child(
+            canvas(
+                move |bounds, window, _| {
+                    let h = unpx(bounds.size.height);
+                    if (height.get() - h).abs() > 0.5 {
+                        height.set(h);
+                        // Drawn again with the room above what scrolls.
+                        window.request_animation_frame();
+                    }
+                },
+                |_, _, _, _| {},
+            )
+            .absolute()
+            .top_0()
+            .left_0()
+            .size_full(),
+        )
+        .into_any_element()
 }
 
 fn glass<E: Styled + ParentElement>(panel: E, fill: u32, radius: f32, tint: f32, blur: f32) -> E {

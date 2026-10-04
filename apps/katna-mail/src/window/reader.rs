@@ -1414,8 +1414,8 @@ impl MailWindow {
                                     div()
                                         .flex()
                                         .flex_col()
+                                        .pt(px(self.reader_head.get() + space::S4))
                                         .pb(px(24.0))
-                                        .child(title)
                                         .children(summary)
                                         .children(muted)
                                         .children(notes)
@@ -1436,6 +1436,21 @@ impl MailWindow {
                             th.text_dim & 0xffff_ff00 | 0x99,
                         ),
                     )
+                    // The subject stays at the top while the mails scroll
+                    // under it, as the chat's header does.
+                    .child(
+                        self.pinned_head(
+                            title.with_animation(
+                                ("open-subject", key_number(key)),
+                                Animation::new(katna_ui::motion::time(Duration::from_millis(280)))
+                                    .with_easing(ease_out_quint()),
+                                |el, t| el.opacity(t),
+                            ),
+                            th.pane(),
+                            true,
+                            th,
+                        ),
+                    )
                     .children(link_status),
             )
             .children(footer.map(|footer| {
@@ -1447,6 +1462,21 @@ impl MailWindow {
             }))
             .children(self.render_text_menu(th, cx))
             .into_any_element()
+    }
+
+    /// The header pinned over the top of the open mail or chat
+    /// ([`crate::widgets::pinned_head`]), with a line under it once
+    /// something is beneath when `line` (the chat's header draws its own).
+    pub(super) fn pinned_head(
+        &self,
+        content: impl IntoElement,
+        fill: u32,
+        line: bool,
+        th: &Theme,
+    ) -> AnyElement {
+        let under = line && unpx(self.reader_scroll.offset().y) < -0.5;
+        let frost = self.config.experimental.frosted_headers;
+        crate::widgets::pinned_head(content, fill, under, frost, self.reader_head.clone(), th)
     }
 
     fn render_part_content(&self, ix: usize, th: &Theme, cx: &mut Context<Self>) -> AnyElement {

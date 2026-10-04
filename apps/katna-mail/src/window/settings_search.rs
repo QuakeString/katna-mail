@@ -535,6 +535,12 @@ const ENTRIES: &[Entry] = &[
     ),
     entry(
         Section::Experimental,
+        "look-frosted-headers",
+        "look-frosted-headers-detail",
+        "blur frosted glass header bar top sticky pinned subject scroll under",
+    ),
+    entry(
+        Section::Experimental,
         "chat-view",
         "chat-view-detail",
         "chat bubbles whatsapp group conversation messenger reading",

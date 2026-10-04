@@ -204,7 +204,9 @@ impl MailWindow {
                 .is_some_and(|r| !r.files.is_empty()),
             Err(_) => false,
         };
-        self.row_height() + self.chips_extra(has_chips)
+        // The first line holds the room under the bar pinned over the top.
+        let head = if ix == 0 { self.list_head.get() } else { 0.0 };
+        self.row_height() + self.chips_extra(has_chips) + head
     }
 
     /// Keeps the line just opened where it was on screen while the reading
@@ -315,8 +317,15 @@ impl MailWindow {
                 .size_full()
                 .flex()
                 .flex_col()
-                .child(toolbar)
-                .child(fade_in(body, self.card_seq))
+                .relative()
+                .map(|d| {
+                    if two_pane_reading {
+                        d.child(toolbar).child(fade_in(body, self.card_seq))
+                    } else {
+                        // The bar floats over the top of the lines.
+                        d.child(fade_in(body, self.card_seq)).child(toolbar)
+                    }
+                })
                 .into_any_element()
         };
         // Beside a conversation, the list keeps its own keys: Up and Down
@@ -424,23 +433,31 @@ impl MailWindow {
         } else {
             toolbar
         };
-        (
-            toolbar,
+        // The bar, the tabs and the banner stay at the top while the lines
+        // scroll under them, frosted when Blur and Frosted headers are on,
+        // as the open mail's subject does.
+        let under = katna_ui::unpx(self.list_state.scrolled()) > 0.5;
+        let head = crate::widgets::pinned_head(
             div()
-                .size_full()
                 .flex()
                 .flex_col()
+                .child(toolbar)
                 .children(tabs)
-                .children(banner)
-                .child(
-                    div()
-                        .relative()
-                        .flex_1()
-                        .min_h_0()
-                        .child(list)
-                        .children(self.render_list_top(th, cx))
-                        .child(self.tour_mark(super::tour::Spot::List)),
-                )
+                .children(banner),
+            th.pane(),
+            under,
+            self.config.experimental.frosted_headers,
+            self.list_head.clone(),
+            th,
+        );
+        (
+            head,
+            div()
+                .size_full()
+                .relative()
+                .child(list)
+                .children(self.render_list_top(th, cx))
+                .child(self.tour_mark(super::tour::Spot::List))
                 .into_any_element(),
         )
     }
@@ -513,8 +530,8 @@ impl MailWindow {
                 .w_full()
                 .flex()
                 .flex_col()
-                .child(toolbar)
                 .child(fade_in(body, self.card_seq))
+                .child(toolbar)
                 .when(see_through && has_reader, |d| d.opacity(1.0 - shown))
                 .when(has_reader && shown > 0.001, |d| {
                     d.child(
@@ -2221,6 +2238,7 @@ impl MailWindow {
             self.list_state.remeasure();
         }
         self.keep_opened_line(cx);
+        self.list_state.set_head(px(self.list_head.get()));
         self.list_state.follow();
         list(
             self.list_state.state().clone(),
@@ -2241,6 +2259,15 @@ impl MailWindow {
                 let row = row.map(|r| this.with_pending(r));
                 let row = this.render_row(ix, entry.key, row, &th, cx);
                 this.fetch_pictures(cx);
+                // The first line starts below the bar pinned over the top.
+                if ix == 0 {
+                    return div()
+                        .flex()
+                        .flex_col()
+                        .child(div().h(px(this.list_head.get())))
+                        .child(row)
+                        .into_any_element();
+                }
                 row
             }),
         )

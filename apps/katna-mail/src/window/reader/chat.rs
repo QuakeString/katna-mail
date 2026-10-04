@@ -680,9 +680,6 @@ impl MailWindow {
             .size_full()
             .flex()
             .flex_col()
-            .child(header)
-            .children(self.render_chat_summary_strip(th, cx))
-            .children(self.render_pin_bar(th, cx))
             .child(
                 div()
                     .flex_1()
@@ -721,7 +718,7 @@ impl MailWindow {
                                         .justify_end()
                                         .gap(px(2.0))
                                         .px(px(if phone { 10.0 } else { 16.0 }))
-                                        .pt(px(12.0))
+                                        .pt(px(self.reader_head.get() + 12.0))
                                         .pb(px(8.0))
                                         .children(feed)
                                         .map(|d| self.text_area(d, cx))
@@ -749,10 +746,34 @@ impl MailWindow {
                         ),
                     )
                     .children(self.render_chat_down(down_t, newer, th, cx))
-                    .children(self.render_chat_summary_drop(th, cx))
-                    .children(self.render_chat_people(th, cx))
-                    .children(self.render_pin_list(th, cx))
-                    .children(self.render_pin_replace(th, cx))
+                    // The header, its summary strip and pins stay at the
+                    // top while the chat scrolls under them; what they
+                    // drop down hangs from their foot.
+                    .child(
+                        self.pinned_head(
+                            div()
+                                .flex()
+                                .flex_col()
+                                .child(header)
+                                .children(self.render_chat_summary_strip(th, cx))
+                                .children(self.render_pin_bar(th, cx)),
+                            th.chat_pane(),
+                            false,
+                            th,
+                        ),
+                    )
+                    .child(
+                        div()
+                            .absolute()
+                            .top(px(self.reader_head.get()))
+                            .left_0()
+                            .right_0()
+                            .bottom_0()
+                            .children(self.render_chat_summary_drop(th, cx))
+                            .children(self.render_chat_people(th, cx))
+                            .children(self.render_pin_list(th, cx))
+                            .children(self.render_pin_replace(th, cx)),
+                    )
                     // Where the link under the pointer really goes.
                     .children(
                         self.hovered_link
@@ -1336,7 +1357,7 @@ impl MailWindow {
                             ),
                     ),
             )
-            .children(self.summary_button("chat-summary", th, cx))
+            .children(self.summary_pill(th, cx))
             .child(end)
             .into_any_element()
     }

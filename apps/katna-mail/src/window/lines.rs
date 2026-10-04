@@ -27,6 +27,12 @@ pub(super) struct Lines {
     /// All of the list's lines, and their height until drawn.
     count: Cell<usize>,
     height: Cell<Pixels>,
+    /// How tall the bar pinned over the list's top is: lines brought into
+    /// view stop below it.
+    head: Cell<Pixels>,
+    /// A line GPUI brought into view from out of the page, put below the
+    /// bar once drawn.
+    reveal: Cell<Option<usize>>,
 }
 
 impl Lines {
@@ -37,6 +43,8 @@ impl Lines {
             len: Cell::new(0),
             count: Cell::new(0),
             height: Cell::new(px(0.0)),
+            head: Cell::new(px(0.0)),
+            reveal: Cell::new(None),
         }
     }
 
@@ -64,9 +72,27 @@ impl Lines {
         self.state.scroll_to(self.local(top));
     }
 
+    /// The bar pinned over the list's top is `head` tall.
+    pub(super) fn set_head(&self, head: Pixels) {
+        // The first line holds the room under the bar: drawn again at its
+        // new height.
+        if self.head.replace(head) != head && self.base.get() == 0 && self.len.get() > 0 {
+            self.state.remeasure_items(0..1);
+        }
+    }
+
     /// Before a frame: moves the page along when the top line on show comes
-    /// near its edge.
+    /// near its edge, and puts a line just brought into view below the bar.
     pub(super) fn follow(&self) {
+        if let Some(ix) = self.reveal.get()
+            && let Some(bounds) = self.bounds_for_item(ix)
+        {
+            self.reveal.set(None);
+            let top = self.viewport_bounds().top() + self.head.get();
+            if bounds.top() < top {
+                self.state.scroll_by(bounds.top() - top);
+            }
+        }
         let top = self.state.logical_scroll_top().item_ix;
         let (base, len) = (self.base.get(), self.len.get());
         let near_start = base > 0 && top < MARGIN;
@@ -101,6 +127,20 @@ impl Lines {
         if ix >= self.count.get() {
             return;
         }
+        // Drawn: just enough to show it whole between the bar and the
+        // bottom.
+        if let Some(bounds) = self.bounds_for_item(ix) {
+            let view = self.viewport_bounds();
+            let top = view.top() + self.head.get();
+            if bounds.top() < top {
+                self.state.scroll_by(bounds.top() - top);
+            } else if bounds.bottom() > view.bottom() {
+                self.state
+                    .scroll_by((bounds.bottom() - view.bottom()).min(bounds.top() - top));
+            }
+            return;
+        }
+        self.reveal.set(Some(ix));
         if !self.holds(ix) {
             let below = ix > self.logical_scroll_top().item_ix;
             self.load(ix);

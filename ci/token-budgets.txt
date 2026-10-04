@@ -2,4 +2,4 @@
 # (ci/check-tokens.sh). Only ever lower these.
 radius 260
 text_size 787
-spacing 2127
+spacing 2126

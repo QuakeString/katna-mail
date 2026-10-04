@@ -1,0 +1,12 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+title = "A calmer summary button, and a header that stays put"
+text = """
+In chat view, the summary sparkle now sits in a small grey pill of its own
+beside the Chat and Mail switch, and lifts white while the summary shows.
+The summary glides open and closed instead of appearing at once. In both
+the mail and chat views, the header now stays at the top while the mails
+scroll under it, and the mail list's rows slide under its top bar the same
+way, frosted when Blur is on. Settings > Experimental has a Frosted
+headers switch to keep them solid.
+"""

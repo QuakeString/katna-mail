@@ -240,13 +240,15 @@ impl MailWindow {
 
     /// What else lets the window's blur through: the cards, with how
     /// opaque they are, the room behind a chat's bubbles and the open
-    /// search box, each on its own switch.
+    /// search box and the bars things scroll under, each on its own
+    /// switch.
     fn pane_switches(&self, th: &Theme, cx: &mut Context<Self>) -> AnyElement {
         let experimental = &self.config.experimental;
-        let (panes, chat, search) = (
+        let (panes, chat, search, headers) = (
             experimental.frosted_panes,
             experimental.frosted_chat,
             experimental.frosted_search,
+            experimental.frosted_headers,
         );
         div()
             .flex()
@@ -276,6 +278,15 @@ impl MailWindow {
                 tr!("look-frosted-search-detail"),
                 search,
                 Change::FrostedSearch(!search),
+                th,
+                cx,
+            ))
+            .child(self.switch_row(
+                "page-frosted-headers",
+                tr!("look-frosted-headers"),
+                tr!("look-frosted-headers-detail"),
+                headers,
+                Change::FrostedHeaders(!headers),
                 th,
                 cx,
             ))

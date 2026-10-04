@@ -108,6 +108,7 @@ pub(super) enum Change {
     FrostedChat(bool),
     /// In a blurred window, the open search box lets the blur through.
     FrostedSearch(bool),
+    FrostedHeaders(bool),
     /// Conversations between people open as a group chat.
     ChatView(bool),
     /// Days of mail the daemon downloads ahead of time; 0 for all mail.
@@ -614,6 +615,7 @@ impl MailWindow {
             Change::PaneOpacity(opacity) => self.config.experimental.pane_opacity = opacity,
             Change::FrostedChat(on) => self.config.experimental.frosted_chat = on,
             Change::FrostedSearch(on) => self.config.experimental.frosted_search = on,
+            Change::FrostedHeaders(on) => self.config.experimental.frosted_headers = on,
             Change::ChatView(on) => {
                 self.config.experimental.chat_view = on;
                 self.open_chat_as_set();
